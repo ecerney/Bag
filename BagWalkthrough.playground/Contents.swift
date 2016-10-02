@@ -1,13 +1,35 @@
-// 1
-struct Bag<Element: Hashable> {
-  // 2
-  private var contents = Dictionary<Element, Int>()
+/*
+ * Copyright (c) 2016 Razeware LLC
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
-  // 3
+struct Bag<Element: Hashable> {
+  // 1
+  fileprivate var contents = Dictionary<Element, Int>()
+
+  // 2
   var uniqueCount: Int {
     return contents.count
   }
 
+  // 3
   var totalCount: Int {
     return contents.values.reduce(0) { $0 + $1 }
   }
@@ -16,23 +38,25 @@ struct Bag<Element: Hashable> {
   init() { }
 
   // 2
-  init<S: Sequence where S.Iterator.Element == Element>(_ sequence: S) {
+  init<S: Sequence>(_ sequence: S) where S.Iterator.Element == Element {
     for element in sequence {
       add(element)
     }
   }
 
   // 3
-  init<S: Sequence where S.Iterator.Element == (Element, Int)>(_ sequence: S) {
+  init<S: Sequence>(_ sequence: S) where S.Iterator.Element == (Element, Int) {
     for (element, count) in sequence {
       add(element, occurrences: count)
     }
   }
 
-  // 4
+  // 1
   mutating func add(_ member: Element, occurrences: Int = 1) {
+    // 2
     precondition(occurrences > 0, "Can only add a positive number of occurrences")
 
+    // 3
     if let currentCount = contents[member] {
       contents[member] = currentCount + occurrences
     } else {
@@ -40,14 +64,16 @@ struct Bag<Element: Hashable> {
     }
   }
 
-  // 5
   mutating func remove(member: Element, occurrences: Int = 1) {
+    // 1
     guard let currentCount = contents[member], currentCount >= occurrences else {
       preconditionFailure("Removed non-existent elements")
     }
 
+    // 2
     precondition(occurrences > 0, "Can only remove a positive number of occurrences")
 
+    // 3
     if currentCount > occurrences {
       contents[member] = currentCount - occurrences
     } else {
@@ -62,13 +88,13 @@ extension Bag: CustomStringConvertible {
   }
 }
 
-extension Bag: ArrayLiteralConvertible {
+extension Bag: ExpressibleByArrayLiteral {
   init(arrayLiteral elements: Element...) {
     self.init(elements)
   }
 }
 
-extension Bag: DictionaryLiteralConvertible {
+extension Bag: ExpressibleByDictionaryLiteral {
   init(dictionaryLiteral elements: (Element, Int)...) {
     self.init(elements)
   }
@@ -119,10 +145,10 @@ extension Bag: Collection {
 // 1
 struct BagIndex<Element: Hashable>: Comparable {
   // 2
-  private var index: DictionaryIndex<Element, Int>
+  fileprivate var index: DictionaryIndex<Element, Int>
 
   // 3
-  private init(_ dictionaryIndex: DictionaryIndex<Element, Int>) {
+  fileprivate init(_ dictionaryIndex: DictionaryIndex<Element, Int>) {
     self.index = dictionaryIndex
   }
 }
@@ -148,7 +174,7 @@ let dataSet: Set = ["Banana", "Orange", "Banana"]
 var arrayBag = Bag(dataArray)
 precondition(arrayBag.contents == dataDictionary, "Expected arrayBag contents to match \(dataDictionary)")
 
-//var dictionaryBag = Bag(dataDictionary) // TODO, doesn't work in Beta 3
+//var dictionaryBag = Bag(dataDictionary) // doesn't currently work in Swift 3
 //precondition(dictionaryBag.contents == dataDictionary, "Expected dictionaryBag contents to match \(dataDictionary)")
 
 var setBag = Bag(dataSet)
@@ -169,25 +195,24 @@ for (element, count) in shoppingCart {
 }
 
 // Find all elements with a count greater than 1
-let moreThanOne = shoppingCart.filter({ $0.1 > 1 })
+let moreThanOne = shoppingCart.filter { $0.1 > 1 }
 moreThanOne
 precondition(moreThanOne.first!.element == "Banana" && moreThanOne.first!.count == 2, "Expected moreThanOne contents to be [(\"Banana\", 2)]")
 
 // Get an array of all elements without counts
-let itemList = shoppingCart.map({ $0.0 })
+let itemList = shoppingCart.map { $0.0 }
 itemList
 precondition(itemList == ["Orange", "Banana"], "Expected itemList contents to be [\"Orange\", \"Banana\"]")
 
 // Get the total number of items in the bag
-let numberOfItems = shoppingCart.reduce(0, combine: { $0 + $1.1 })
+let numberOfItems = shoppingCart.reduce(0) { $0 + $1.1 }
 numberOfItems
 precondition(numberOfItems == 3, "Expected numberOfItems contents to be 3")
 
 // Get a sorted array of elements by their count in decending order
-let sorted = shoppingCart.sorted() { $0.0 < $1.0 }
+let sorted = shoppingCart.sorted { $0.0 < $1.0 }
 sorted
 precondition(sorted.first!.element == "Banana" && moreThanOne.first!.count == 2, "Expected sorted contents to be [(\"Banana\", 2), (\"Orange\", 1)]")
-
 
 // Get the first item in the bag
 let firstItem = shoppingCart.first
@@ -206,7 +231,6 @@ let bananaIndex = shoppingCart.indices.first { shoppingCart[$0].element == "Bana
 let banana = shoppingCart[bananaIndex]
 precondition(banana.element == "Banana" && banana.count == 2, "Expected banana to have value (\"Banana\", 2)")
 
-
 // 1
 let fruitBasket = Bag(dictionaryLiteral: ("Apple", 5), ("Orange", 2), ("Pear", 3), ("Banana", 7))
 
@@ -214,9 +238,8 @@ let fruitBasket = Bag(dictionaryLiteral: ("Apple", 5), ("Orange", 2), ("Pear", 3
 let fruitSlice = fruitBasket.dropFirst() // No pun intended ;]
 
 // 3
-if let fruitMinIndex = fruitSlice.indices.min(isOrderedBefore: { fruitSlice[$0] > fruitSlice[$1] }) {
+if let fruitMinIndex = fruitSlice.indices.min(by: { fruitSlice[$0] > fruitSlice[$1] }) {
   // 4
   let minFruitFromSlice = fruitSlice[fruitMinIndex]
   let minFruitFromBasket = fruitBasket[fruitMinIndex]
 }
-
