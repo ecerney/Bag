@@ -1,28 +1,28 @@
 /*
- * Copyright (c) 2016 Razeware LLC
- *
- * Permission is hereby granted, free of charge, to any person obtaining a copy
- * of this software and associated documentation files (the "Software"), to deal
- * in the Software without restriction, including without limitation the rights
- * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- * copies of the Software, and to permit persons to whom the Software is
- * furnished to do so, subject to the following conditions:
- *
- * The above copyright notice and this permission notice shall be included in
- * all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
- * THE SOFTWARE.
- */
+* Copyright (c) 2016 Razeware LLC
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+* THE SOFTWARE.
+*/
 
 struct Bag<Element: Hashable> {
   // 1
-  fileprivate var contents = Dictionary<Element, Int>()
+  fileprivate var contents: [Element: Int] = [:]
 
   // 2
   var uniqueCount: Int {
@@ -45,7 +45,7 @@ struct Bag<Element: Hashable> {
   }
 
   // 3
-  init<S: Sequence>(_ sequence: S) where S.Iterator.Element == (Element, Int) {
+  init<S: Sequence>(_ sequence: S) where S.Iterator.Element == (key: Element, value: Int) {
     for (element, count) in sequence {
       add(element, occurrences: count)
     }
@@ -64,7 +64,7 @@ struct Bag<Element: Hashable> {
     }
   }
 
-  mutating func remove(member: Element, occurrences: Int = 1) {
+  mutating func remove(_ member: Element, occurrences: Int = 1) {
     // 1
     guard let currentCount = contents[member], currentCount >= occurrences else {
       preconditionFailure("Removed non-existent elements")
@@ -84,7 +84,7 @@ struct Bag<Element: Hashable> {
 
 extension Bag: CustomStringConvertible {
   var description: String {
-    return contents.description
+    return String(describing: contents)
   }
 }
 
@@ -96,7 +96,8 @@ extension Bag: ExpressibleByArrayLiteral {
 
 extension Bag: ExpressibleByDictionaryLiteral {
   init(dictionaryLiteral elements: (Element, Int)...) {
-    self.init(elements)
+    // The map converts elements to the "named" tuple the initializer expects.
+    self.init(elements.map { (key: $0.0, value: $0.1) })
   }
 }
 
@@ -143,9 +144,9 @@ extension Bag: Collection {
 }
 
 // 1
-struct BagIndex<Element: Hashable>: Comparable {
+struct BagIndex<Element: Hashable> {
   // 2
-  fileprivate var index: DictionaryIndex<Element, Int>
+  fileprivate let index: DictionaryIndex<Element, Int>
 
   // 3
   fileprivate init(_ dictionaryIndex: DictionaryIndex<Element, Int>) {
@@ -153,18 +154,22 @@ struct BagIndex<Element: Hashable>: Comparable {
   }
 }
 
-func ==<Element: Hashable>(lhs: BagIndex<Element>, rhs: BagIndex<Element>) -> Bool {
-  return lhs.index == rhs.index
-}
+extension BagIndex: Comparable {
+  static func == (lhs: BagIndex, rhs: BagIndex) -> Bool {
+    return lhs.index == rhs.index
+  }
 
-func <<Element: Hashable>(lhs: BagIndex<Element>, rhs: BagIndex<Element>) -> Bool {
-  return lhs.index < rhs.index
+  static func < (lhs: BagIndex, rhs: BagIndex) -> Bool {
+    return lhs.index < rhs.index
+  }
 }
 
 var shoppingCart = Bag<String>()
 shoppingCart.add("Banana")
-shoppingCart.add("Orange")
+shoppingCart.add("Orange", occurrences: 2)
 shoppingCart.add("Banana")
+shoppingCart.remove("Orange")
+
 precondition("\(shoppingCart)" == "\(shoppingCart.contents)", "Expected bag description to match its contents description")
 
 let dataArray = ["Banana", "Orange", "Banana"]
@@ -174,16 +179,16 @@ let dataSet: Set = ["Banana", "Orange", "Banana"]
 var arrayBag = Bag(dataArray)
 precondition(arrayBag.contents == dataDictionary, "Expected arrayBag contents to match \(dataDictionary)")
 
-//var dictionaryBag = Bag(dataDictionary) // doesn't currently work in Swift 3
-//precondition(dictionaryBag.contents == dataDictionary, "Expected dictionaryBag contents to match \(dataDictionary)")
+var dictionaryBag = Bag(dataDictionary)
+precondition(dictionaryBag.contents == dataDictionary, "Expected dictionaryBag contents to match \(dataDictionary)")
 
 var setBag = Bag(dataSet)
 precondition(setBag.contents == ["Banana": 1, "Orange": 1], "Expected setBag contents to match \(["Banana": 1, "Orange": 1])")
 
-var arrayLiteralBag = Bag(arrayLiteral: "Banana", "Orange", "Banana")
+var arrayLiteralBag: Bag = ["Banana", "Orange", "Banana"]
 precondition(arrayLiteralBag.contents == dataDictionary, "Expected arrayLiteralBag contents to match \(dataDictionary)")
 
-var dictionaryLiteralBag = Bag(dictionaryLiteral: ("Banana", 2), ("Orange", 1))
+var dictionaryLiteralBag: Bag = ["Banana": 2, "Orange": 1]
 precondition(dictionaryLiteralBag.contents == dataDictionary, "Expected dictionaryLiteralBag contents to match \(dataDictionary)")
 
 for element in shoppingCart {
